@@ -1,0 +1,111 @@
+
+BDIModel {
+	Agent Agent1 {
+		Imports {
+			Import {
+				"log_messages"
+			}
+			Import {
+				"send_messages"
+			}
+		}
+		Parameters {
+			My_Network={192.168.1.0}
+			My_IP={192.168.1.1}
+			My_Domain={AUBURN}
+			My_Location={Shelby}
+			Monitoring_Ports={"12, 23, 25, 27"}
+			Open_Ports={"80, 120, 155, 2321, 5543, 43235"}
+			Monitoring_Hosts={ "CSELabHost1, MDSELabHost4, LibraryHost12"}
+			Trusted_Domains={"AUBURN, AUM"}
+			Trusted_Applications={"Antivirus, Microsoft, Adobe"}
+			Trusted_Networks={"192.168.1.0 , 192.168.2.0 , 255.234.2.0"}	
+		}
+		Events {
+			Event isPortOpen {
+				"PortScan" 
+				Code= {"if(portOpen) {
+						return 1;
+						} else {
+							return 0;
+						}
+						"
+				}
+				Triggers "UpdatePortStatus in Belief"
+				}
+			Event CheckPortAccess {
+				"PortStatus"
+				Code= {"if(get_portaccesstype==public) {
+							anyone can access
+						} else if (get_portaccesstype==private) {
+							if(getaccessedIP=public) {
+								alert portAccessViolation
+							} else {
+								Port is secure
+							}
+						}
+						"}
+				Triggers "Alert Plan"
+			}
+			Event Alert {
+				"Alert"
+				Code= {"getAlertMessage
+						getAgents
+						SendAlerts"
+						}
+			}
+		}
+		BeliefSet {
+			PortBeliefs
+			Belief {
+				PortOpen80
+				"OpenPort"
+				"isPortOpen"
+				Fact {
+					"Port 80 is open"
+				}
+			}
+			Belief {
+				PortSecure23
+				"SecurePort"
+				"CheckPortAccess"
+				Fact {
+					"Port 23 is secure"
+				}				
+			}
+		}
+		Plans {
+			Plan { "PortOpen" 
+				PriorityValue= 0010
+				Body {
+					"Trigger the corresponding Event and log"
+				}
+				Triggers isPortOpen
+				}
+			Plan { "CheckSecurePort"
+				PriorityValue= 0021
+				Body {
+					"Trigger the corresponding Event and log"
+				}
+				Triggers CheckPortAccess
+				}
+			Plan { "Alert"
+				PriorityValue= 0002
+				Body {
+					"Send Alert messages to the Agents"
+				}
+				Triggers Alert
+				}
+		}
+		Goals { 
+			Query {
+				OpenPort
+				"Plan PortOpen"				
+			}
+			Perform {
+				SecurePort
+				"Plan CheckSecurePort"
+			}
+		}
+		}
+}
